@@ -169,6 +169,18 @@ class EncryptedConfigurationTest < ActiveSupport::TestCase
     end
   end
 
+  test "require nested explicit nil key returns nil" do
+    @credentials.write({ database: { host: nil } }.to_yaml)
+    assert_nil @credentials.require(:database, :host)
+  end
+
+  test "require nested key with intermediate nil raises key error" do
+    @credentials.write({ database: nil }.to_yaml)
+    assert_raise(KeyError, match: "Missing key: [:database, :host]") do
+      @credentials.require(:database, :host)
+    end
+  end
+
   test "optional missing key returns nil" do
     assert_nil @credentials.option(:two_is_not_here)
   end
@@ -198,5 +210,15 @@ class EncryptedConfigurationTest < ActiveSupport::TestCase
 
   test "optional missing key with default block returning nil returns nil" do
     assert_nil @credentials.option(:missing, default: -> { nil })
+  end
+
+  test "optional nested explicit nil key returns nil without triggering default" do
+    @credentials.write({ database: { host: nil } }.to_yaml)
+    assert_nil @credentials.option(:database, :host, default: "default_host")
+  end
+
+  test "optional nested key with intermediate nil returns default" do
+    @credentials.write({ database: nil }.to_yaml)
+    assert_equal "default_host", @credentials.option(:database, :host, default: "default_host")
   end
 end

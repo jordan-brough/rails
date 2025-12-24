@@ -66,10 +66,8 @@ module ActiveSupport
     #   require(:db_host)         # => ENV.fetch("DB_HOST")
     #   require(:database, :host) # => ENV.fetch("DATABASE__HOST")
     def require(*key)
-      value = dig(*key)
-
-      if !value.nil?
-        value
+      if key_path_exists?(*key)
+        dig(*key)
       else
         raise KeyError, "Missing key: #{key.inspect}"
       end
@@ -86,10 +84,8 @@ module ActiveSupport
     #   config.option(:database, :host, default: "missing")        # => ENV.fetch("DATABASE__HOST", "missing")
     #   config.option(:database, :host, default: -> { "missing" }) # => ENV.fetch("DATABASE__HOST", default.call)
     def option(*key, default: nil)
-      value = dig(*key)
-
-      if !value.nil?
-        value
+      if key_path_exists?(*key)
+        dig(*key)
       elsif default.respond_to?(:call)
         default.call
       else
@@ -155,6 +151,15 @@ module ActiveSupport
 
       def options
         @options ||= deep_transform(config)
+      end
+
+      def key_path_exists?(*keys)
+        hash = config
+        keys.each do |key|
+          return false if !hash.is_a?(Hash) || !hash.key?(key)
+          hash = hash[key]
+        end
+        true
       end
 
       def deserialize(content)
